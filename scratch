@@ -1,0 +1,19 @@
+TODO:
+everything
+
+desired functionality:
+$ playlist-translate
+>> from (1 apple, 2 google, 3 spotify): 1
+>> to (1 apple, 2 google, 3 spotify): 2
+>> enter apple music playlist ID: asdf123
+>> enter apple music api key: $APPLEMUSIC
+>> enter google play music api key: $GOOGLEPLAYMUSIC
+...
+your new google play playlist is available at https://play.google.com/asdf123
+
+
+It should also be usable with cli args like
+$ playlist-translate --from apple --to google --id asdf123
+
+maybe automatically look up those env variables
+and then ask for the keys if not exists
