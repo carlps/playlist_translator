@@ -11,29 +11,39 @@ import requests
 
 @dataclass
 class Service:
+    """
+    """
     name: str
     base_url: str
 
     @property
     def creds(self):
+        """
+        """
         raise NotImplementedError
 
 
 @dataclass
 class Apple(Service):
+    """
+    """
     name: str = "Apple"
-    base_url: str = "TODO"
+    base_url: str = "https://api.music.apple.com/v1/catalog/"
 
     @property
-    def token(self):
+    def storefront(self):
+        # TODO this should be set from the user
+        return 'us'
+
+    @property
+    def _token(self):
         """
-        Apple music suports JWT, so we can use that for credentials.
+        JWT token needed for every call to apple music API.
         """
-        # TODO - handle missing creds
-        alg = os.environ.get('APPLE_ALG')
-        key_id = os.environ.get('APPLE_KEY_ID')
-        team_id = os.environ.get('APPLE_TEAM_ID')
-        secret = os.environ.get('APPLE_SECRET')
+        alg = self._get_environ('APPLE_ALG')
+        key_id = self._get_environ('APPLE_KEY_ID')
+        team_id = self._get_environ('APPLE_TEAM_ID')
+        secret = self._get_environ('APPLE_SECRET')
 
         now = datetime.datetime.now()
         issued_at = int(now.timestamp())
@@ -58,16 +68,37 @@ class Apple(Service):
         token = encoded_jwt.decode()
         return token
 
+    def _get_environ(self, var_name):
+        """
+        Lookup an environment variable and return it's value. Raise an error
+        if it doesn't exist.
+        """
+        var = os.environ.get(var_name)
+        if var is None:
+            # TODO maybe present prompt for setting?
+            # that should prob be in the cli
+            msg = 'Missing required environment variable {}'.format(var_name)
+            raise OSError(msg)
+        return var
+
     @property
-    def headers(self):
-        headers = {'Authorization': 'Bearer {}'.format(self.token),
+    def _headers(self):
+        """
+        Authentication headers needed for every call to apple music api.
+        """
+        headers = {'Authorization': 'Bearer {}'.format(self._token),
                    'Content-Type': 'application/json',
                    }
         return headers
 
     def get(self, url):
-        response = requests.get(url, headers=self.headers)
+        response = requests.get(url, headers=self._headers)
         return response
+
+    def get_playlist(self, playlist_id):
+        url = f'{self.base_url}{self.storefront}/playlists/{playlist_id}'
+        response = self.get(url)
+        return response.json()
 
 
 @dataclass
