@@ -17,3 +17,8 @@ $ playlist-translate --from apple --to google --id asdf123
 
 maybe automatically look up those env variables
 and then ask for the keys if not exists
+
+
+I need a Playlist object with a defined structure and I can create when I pull from web
+and also can have a create_on_service() method that will do the creation.
+This will require figuring out what is available and necessary from each service.
