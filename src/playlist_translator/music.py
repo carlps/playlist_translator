@@ -4,9 +4,7 @@ Define music related objects here like Playlist, Song, etc.
 from dataclasses import dataclass
 from typing import List
 
-# TODO figure out circular dependencies
-# maybe just define this in services
-from .services import Service
+from . import services
 
 
 @dataclass
@@ -28,5 +26,6 @@ class Song:
 class Playlist:
     """
     """
-    service: Service
+    # TODO maybe i don't need service
+    service: 'services.Service'
     songs: List[Song]

@@ -4,7 +4,9 @@ Define music services in here. All should inherit from Service.
 from dataclasses import dataclass
 import datetime
 import os
+import urllib
 
+from gmusicapi import Mobileclient
 import jwt
 import requests
 
@@ -14,7 +16,6 @@ class Service:
     """
     """
     name: str
-    base_url: str
 
     @property
     def creds(self):
@@ -97,6 +98,7 @@ class Apple(Service):
 
     def get_playlist(self, playlist_id):
         url = f'{self.base_url}{self.storefront}/playlists/{playlist_id}'
+        # TODO - handle bad response
         response = self.get(url)
         return response.json()
 
@@ -104,4 +106,30 @@ class Apple(Service):
 @dataclass
 class GooglePlay(Service):
     name: str = "Google Play"
-    base_url: str = "TODO"
+    client: Mobileclient = Mobileclient()
+    authenticated: bool = False
+
+    def authenticate(self):
+        # TODO prob just do this on startup
+        if self.client.is_authenticated():
+            return
+        if not os.path.exists(self.client.OAUTH_FILEPATH):
+            # need to handle higher up i think
+            self.client.perform_oauth()
+        login_success = self.client.oauth_login(self.client.FROM_MAC_ADDRESS)
+        if not login_success:
+            # TODO better exception
+            raise Exception("Could not login to {self.name}")
+        self.authenticated = True
+
+    def get_playlist(self, playlist_id):
+        """
+
+        """
+        if not self.authenticated:
+            # TODO better exception or even better don't let this happen
+            raise Exception("Must authenticate before use")
+        parsed_playlist_id = urllib.parse.unquote(playlist_id)
+        # TODO - handle bad response
+        playlist = self.client.get_shared_playlist_contents(parsed_playlist_id)
+        return playlist
