@@ -10,6 +10,8 @@ from gmusicapi import Mobileclient
 import jwt
 import requests
 
+from .utils import get_environ
+
 
 @dataclass
 class Service:
@@ -41,10 +43,11 @@ class Apple(Service):
         """
         JWT token needed for every call to apple music API.
         """
-        alg = self._get_environ('APPLE_ALG')
-        key_id = self._get_environ('APPLE_KEY_ID')
-        team_id = self._get_environ('APPLE_TEAM_ID')
-        secret = self._get_environ('APPLE_SECRET')
+        # TODO - in cli present prompt for setting env if not exist
+        alg = get_environ('APPLE_ALG')
+        key_id = get_environ('APPLE_KEY_ID')
+        team_id = get_environ('APPLE_TEAM_ID')
+        secret = get_environ('APPLE_SECRET')
 
         now = datetime.datetime.now()
         issued_at = int(now.timestamp())
