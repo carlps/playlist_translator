@@ -44,33 +44,41 @@ class Apple(Service):
         JWT token needed for every call to apple music API.
         """
         # TODO - in cli present prompt for setting env if not exist
-        alg = get_environ('APPLE_ALG')
-        key_id = get_environ('APPLE_KEY_ID')
-        team_id = get_environ('APPLE_TEAM_ID')
         secret = get_environ('APPLE_SECRET')
 
-        now = datetime.datetime.now()
-        issued_at = int(now.timestamp())
-        # TODO set expiration better
-        expires_at = int((now + datetime.timedelta(hours=24)).timestamp())
+        encoded_jwt = jwt.encode(self._jwt_payload,
+                                 secret,
+                                 algorithm=self._jwt_headers['alg'],
+                                 headers=self._jwt_headers)
+        token = encoded_jwt.decode()
+        return token
+
+    @property
+    def _jwt_headers(self):
+        alg = get_environ('APPLE_ALG')
+        key_id = get_environ('APPLE_KEY_ID')
 
         jwt_headers = {
             'alg': alg,
             'kid': key_id,
         }
+        return jwt_headers
+
+    @property
+    def _jwt_payload(self):
+        team_id = get_environ('APPLE_TEAM_ID')
+        now = datetime.datetime.now()
+        issued_at = int(now.timestamp())
+        # TODO set expiration better
+        expires_at = int((now + datetime.timedelta(hours=24)).timestamp())
 
         jwt_payload = {
             'iss': team_id,
             'iat': issued_at,
             'exp': expires_at,
         }
+        return jwt_payload
 
-        encoded_jwt = jwt.encode(jwt_payload,
-                                 secret,
-                                 algorithm=alg,
-                                 headers=jwt_headers)
-        token = encoded_jwt.decode()
-        return token
 
     def _get_environ(self, var_name):
         """

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.validation import Validator
@@ -40,7 +40,7 @@ class Config:
         direction = self.TO
         self.to_service = self._get_service(direction)
 
-    def get_service(self, direction):
+    def _get_service(self, direction):
         """
 
         """
