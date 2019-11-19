@@ -33,6 +33,9 @@ class Apple(Service):
     name: str = "Apple"
     base_url: str = "https://api.music.apple.com/v1/catalog/"
 
+    dt_format = '%Y-%m-%d'
+    tracks_glom = ('data', ['relationships.tracks.data'])
+
     @property
     def storefront(self):
         # TODO this should be set from the user
@@ -78,7 +81,6 @@ class Apple(Service):
             'exp': expires_at,
         }
         return jwt_payload
-
 
     def _get_environ(self, var_name):
         """
