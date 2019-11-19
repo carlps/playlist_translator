@@ -62,7 +62,7 @@ class Playlist:
     """
     """
     # TODO maybe i don't need service
-    service: services.Service
+    service: Type[services.Service]
     songs: List[Song]
 
     @classmethod
