@@ -1,7 +1,7 @@
 glom
 gmusicapi
-jwt
 pip-tools
 prompt-toolkit
+PyJWT
 pytest
 requests
