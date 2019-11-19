@@ -59,11 +59,11 @@ def mock_token(monkeypatch):
     return mock token obj to ensure it's returned when decoded
     """
     token = MockToken()
+
     def mock_encode(*args, **kwargs):
         return token.encode(*args, **kwargs)
     monkeypatch.setattr(jwt, 'encode', mock_encode)
     return token
-
 
 
 def test_token(mock_token, apple):

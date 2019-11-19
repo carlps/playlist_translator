@@ -12,6 +12,7 @@ def test_get_environ():
     env_var = utils.get_environ(key)
     assert env_var == var
 
+
 def test_get_environ_fail():
     key = "not-an-env-var"
     with pytest.raises(OSError):
