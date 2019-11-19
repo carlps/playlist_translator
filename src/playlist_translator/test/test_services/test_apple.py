@@ -40,7 +40,37 @@ def test_jwt_payload(apple):
     assert apple._jwt_payload == payload
 
 
-def test_token(mocker, apple):
+class MockToken:
+    def encode(self, payload, secret, algorithm, headers):
+        self.payload = payload
+        self.secret = secret
+        self.algorithm = algorithm
+        self.headers = headers
+        return self
+
+    def decode(self):
+        return self
+
+
+@pytest.fixture
+def mock_token(monkeypatch):
+    """
+    jwt token mocked to just test args and calling
+    return mock token obj to ensure it's returned when decoded
+    """
+    token = MockToken()
+    def mock_encode(*args, **kwargs):
+        return token.encode(*args, **kwargs)
+    monkeypatch.setattr(jwt, 'encode', mock_encode)
+    return token
+
+
+
+def test_token(mock_token, apple):
+    """
+    using MockToken class to ensure we are correctly calling jwt.encode and
+    decode
+    """
     alg = 'alg'
     key = 'key'
     team_id = 'team_id'
@@ -59,12 +89,11 @@ def test_token(mocker, apple):
     # tests to fail. should probably have better tests.
     payload = {'iss': team_id, 'iat': timestamp, 'exp': expires}
 
-    encode = mocker.patch('jwt.encode')
-    encoded_result = mocker.MagicMock()
-    encode.return_value = encoded_result
     token = apple._token
-    jwt.encode.assert_called_once_with(payload,
-                                       secret,
-                                       algorithm=alg,
-                                       headers=headers)
-    assert token == encoded_result.decode()
+
+    assert token.payload == payload
+    assert token.secret == secret
+    assert token.algorithm == alg
+    assert token.headers == headers
+
+    assert token == mock_token
