@@ -120,11 +120,14 @@ class Apple(Service):
 class GooglePlay(Service):
     name: str = "Google Play"
     client: Mobileclient = Mobileclient()
-    authenticated: bool = False
+
+    @property
+    def is_authenticated(self):
+        return self.client.is_authenticated()
 
     def authenticate(self):
         # TODO prob just do this on startup
-        if self.client.is_authenticated():
+        if self.is_authenticated():
             return
         if not os.path.exists(self.client.OAUTH_FILEPATH):
             # need to handle higher up i think
@@ -133,13 +136,15 @@ class GooglePlay(Service):
         if not login_success:
             # TODO better exception
             raise Exception("Could not login to {self.name}")
-        self.authenticated = True
+
+    def logout(self):
+        self.client.logout()
 
     def get_playlist(self, playlist_id):
         """
 
         """
-        if not self.authenticated:
+        if not self.is_authenticated:
             # TODO better exception or even better don't let this happen
             raise Exception("Must authenticate before use")
         parsed_playlist_id = urllib.parse.unquote(playlist_id)

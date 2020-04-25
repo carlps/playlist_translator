@@ -56,12 +56,31 @@ class Song:
             composer_name=track_attrs['composerName'],
         )
 
+    @classmethod
+    def from_gplay_entry(cls: Type[S], entry: dict) -> S:
+
+        track = entry['track']
+        artist = Artist(track['artist'])
+        # gplay only has realease year for a song
+        release_date = datetime.date(year=track['year'], month=1, day=1)
+
+        return cls(
+            service_id=entry['trackId'],
+            name=track['title'],
+            artist=artist,
+            url=None,  # gplay has no song url # TODO see if we can delete from apple
+            release_date=release_date,
+            album_name=track['album'],
+            track_number=track['trackNumber'],
+            composer_name=track['composer']
+        )
+
 
 @dataclass
 class Playlist:
     """
     """
-    # TODO maybe i don't need service
+    # TODO maybe i don't need service -- or maybe an instantiated service?
     service: Type[services.Service]
     songs: List[Song]
 
@@ -72,3 +91,8 @@ class Playlist:
         assert len(tracks_list) <= 1
         songs = [Song.from_apple_track(track) for track in tracks_list[0]]
         return cls(services.Apple, songs)
+
+    @classmethod
+    def from_gplay_response(cls: Type[P], gplay_response: List) -> P:
+        songs = [Song.from_gplay_entry(entry) for entry in gplay_response]
+        return cls(services.GooglePlay, songs)
