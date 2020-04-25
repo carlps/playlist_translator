@@ -3,7 +3,7 @@ Define music related objects here like Playlist, Song, etc.
 """
 from dataclasses import dataclass
 import datetime
-from typing import List, Type, TypeVar
+from typing import List, Optional, Type, TypeVar
 
 from glom import glom
 
@@ -28,7 +28,7 @@ class Song:
     service_id: str
     name: str
     artist: Artist
-    url: str
+    url: Optional[str]
     release_date: datetime.date
     album_name: str
     track_number: int
