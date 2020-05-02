@@ -4,13 +4,16 @@ Define music services in here. All should inherit from Service.
 from dataclasses import dataclass
 import datetime
 import os
-import urllib
+from typing import Dict, List
+from urllib import parse
 
+from glom import glom
 from gmusicapi import Mobileclient
 import jwt
 import requests
 
 from .utils import get_environ
+from .music import Playlist, Song
 
 
 @dataclass
@@ -20,8 +23,15 @@ class Service:
     name: str
 
     @property
-    def creds(self):
+    def is_authenticated(self):
+        raise NotImplementedError
+
+    def get_playlist(self, playlist_id: str) -> Playlist:
+        raise NotImplementedError
+
+    def get_song(self, song: Song) -> Song:
         """
+        Given a Song, return this services definition of that Song
         """
         raise NotImplementedError
 
@@ -33,7 +43,6 @@ class Apple(Service):
     name: str = "Apple"
     base_url: str = "https://api.music.apple.com/v1/catalog/"
 
-    dt_format = '%Y-%m-%d'
     tracks_glom = ('data', ['relationships.tracks.data'])
 
     @property
@@ -108,12 +117,20 @@ class Apple(Service):
     def get(self, url):
         response = requests.get(url, headers=self._headers)
         return response
-
-    def get_playlist(self, playlist_id):
+    
+    def get_playlist_response(self, playlist_id: str) -> Dict:
         url = f'{self.base_url}{self.storefront}/playlists/{playlist_id}'
         # TODO - handle bad response
         response = self.get(url)
         return response.json()
+
+    def get_playlist(self, playlist_id: str) -> Playlist:
+        response = self.get_playlist_response(playlist_id)
+        tracks_list = glom(response, self.tracks_glom)
+        # returns list of list. why?
+        assert len(tracks_list) == 1
+        return Playlist.from_apple_tracks_list(tracks_list[0])
+
 
 
 @dataclass
@@ -127,7 +144,7 @@ class GooglePlay(Service):
 
     def authenticate(self):
         # TODO prob just do this on startup
-        if self.is_authenticated():
+        if self.is_authenticated:
             return
         if not os.path.exists(self.client.OAUTH_FILEPATH):
             # need to handle higher up i think
@@ -140,14 +157,21 @@ class GooglePlay(Service):
     def logout(self):
         self.client.logout()
 
-    def get_playlist(self, playlist_id):
-        """
-
-        """
+    def get_playlist_response(self, playlist_id: str) -> List:
         if not self.is_authenticated:
             # TODO better exception or even better don't let this happen
             raise Exception("Must authenticate before use")
-        parsed_playlist_id = urllib.parse.unquote(playlist_id)
+        parsed_playlist_id = parse.unquote(playlist_id)
         # TODO - handle bad response
-        playlist = self.client.get_shared_playlist_contents(parsed_playlist_id)
+        response = self.client.get_shared_playlist_contents(parsed_playlist_id)
+        return response
+
+    def get_playlist(self, playlist_id: str) -> Playlist:
+        response = self.get_playlist_response(playlist_id)
+        playlist = Playlist.from_gplay_response(response)
         return playlist
+
+
+
+class NotAuthenticatedError(Exception):
+    pass

@@ -3,11 +3,9 @@ Define music related objects here like Playlist, Song, etc.
 """
 from dataclasses import dataclass
 import datetime
-from typing import List, Optional, Type, TypeVar
+from typing import Dict, List, Optional, Type, TypeVar
 
-from glom import glom
-
-from . import services
+from . import parsers
 
 S = TypeVar('S', bound='Song')
 P = TypeVar('P', bound='Playlist')
@@ -25,14 +23,12 @@ class Song:
     """
     """
     # TODO - are these all needed? anything else needed?
-    service_id: str
     name: str
     artist: Artist
-    url: Optional[str]
     release_date: datetime.date
     album_name: str
     track_number: int
-    composer_name: str
+    composer_name: Optional[str]
 
     @classmethod
     def from_apple_track(cls: Type[S], track: dict) -> S:
@@ -41,23 +37,19 @@ class Song:
 
         track_attrs = track['attributes']
         artist = Artist(track_attrs['artistName'])
-        release_date = datetime.datetime.strptime(track_attrs['releaseDate'],
-                                                  services.Apple.dt_format
-                                                  ).date()
+        release_date = parsers.parse_apple_date(track_attrs['releaseDate'])
 
         return cls(
-            service_id=track['id'],
             name=track_attrs['name'],
             artist=artist,
-            url=track_attrs['url'],
             release_date=release_date,
             album_name=track_attrs['albumName'],
             track_number=track_attrs['trackNumber'],
-            composer_name=track_attrs['composerName'],
+            composer_name=track_attrs.get('composerName'),
         )
 
     @classmethod
-    def from_gplay_entry(cls: Type[S], entry: dict) -> S:
+    def from_gplay_entry(cls: Type[S], entry: Dict) -> S:
 
         track = entry['track']
         artist = Artist(track['artist'])
@@ -65,34 +57,25 @@ class Song:
         release_date = datetime.date(year=track['year'], month=1, day=1)
 
         return cls(
-            service_id=entry['trackId'],
             name=track['title'],
             artist=artist,
-            url=None,  # gplay has no song url # TODO see if we can delete from apple
             release_date=release_date,
             album_name=track['album'],
             track_number=track['trackNumber'],
-            composer_name=track['composer']
+            composer_name=track['composer'] or None
         )
 
 
 @dataclass
 class Playlist:
-    """
-    """
-    # TODO maybe i don't need service -- or maybe an instantiated service?
-    service: Type[services.Service]
     songs: List[Song]
 
     @classmethod
-    def from_apple_response(cls: Type[P], apple_response: dict) -> P:
-        tracks_list = glom(apple_response, services.Apple.tracks_glom)
-        # returns a list of lists for some reason? TODO figure it out
-        assert len(tracks_list) <= 1
-        songs = [Song.from_apple_track(track) for track in tracks_list[0]]
-        return cls(services.Apple, songs)
+    def from_apple_tracks_list(cls: Type[P], tracks_list: List) -> P:
+        songs = [Song.from_apple_track(track) for track in tracks_list]
+        return cls(songs)
 
     @classmethod
     def from_gplay_response(cls: Type[P], gplay_response: List) -> P:
         songs = [Song.from_gplay_entry(entry) for entry in gplay_response]
-        return cls(services.GooglePlay, songs)
+        return cls(songs)
