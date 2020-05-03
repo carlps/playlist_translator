@@ -4,7 +4,7 @@ Define music services in here. All should inherit from Service.
 from dataclasses import dataclass
 import datetime
 import os
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 from urllib import parse
 
 from glom import glom
@@ -29,7 +29,7 @@ class Service:
     def get_playlist(self, playlist_id: str) -> Playlist:
         raise NotImplementedError
 
-    def get_song(self, song: Song) -> Song:
+    def lookup_song(self, song: Song) -> Tuple[Optional[Song], Optional[str]]:
         """
         Given a Song, return this services definition of that Song
         """
@@ -44,6 +44,12 @@ class Apple(Service):
     base_url: str = "https://api.music.apple.com/v1/catalog/"
 
     tracks_glom = ('data', ['relationships.tracks.data'])
+    search_songs_glom = 'results.songs.data'
+
+    @property
+    def is_authenticated(self):
+        # TODO handle authentication for apple user
+        return True
 
     @property
     def storefront(self):
@@ -114,8 +120,8 @@ class Apple(Service):
                    }
         return headers
 
-    def get(self, url):
-        response = requests.get(url, headers=self._headers)
+    def get(self, url, params=None):
+        response = requests.get(url, headers=self._headers, params=params)
         return response
     
     def get_playlist_response(self, playlist_id: str) -> Dict:
@@ -131,6 +137,25 @@ class Apple(Service):
         assert len(tracks_list) == 1
         return Playlist.from_apple_tracks_list(tracks_list[0])
 
+    def _search_song(self, song: Song) -> requests.models.Response:
+        # ex: search?term=james+brown&limit=2&types=artists,albums
+        search_term = song.artist_track
+        types = 'songs'
+        params = {'term': search_term, 'types': types}
+        lookup_url = f'{self.base_url}{self.storefront}/search?'
+        response = self.get(lookup_url, params=params)
+        return response
+
+    def lookup_song(self, song: Song) -> Tuple[Optional[Song], Optional[str]]:
+        search_results_response = self._search_song(song)
+        # TODO hangle bad response
+        search_results = search_results_response.json()
+        songs = glom(search_results, self.search_songs_glom)
+        # for now just take first result
+        first_result = songs[0]
+        result_song = Song.from_apple_track(first_result)
+        # TODO - return error if error
+        return result_song, None
 
 
 @dataclass
@@ -171,6 +196,17 @@ class GooglePlay(Service):
         playlist = Playlist.from_gplay_response(response)
         return playlist
 
+    def _search_song(self, song: Song) -> List[Dict]:
+        query = song.artist_track
+        search_results = self.client.search(query)
+        return search_results['song_hits']
+
+    def lookup_song(self, song: Song) -> Tuple[Optional[Song], Optional[str]]:
+        results = self._search_song(song)
+        # TODO handle bad response
+        # for now just take first result
+        result_song = Song.from_gplay_entry(results[0])
+        return result_song, None
 
 
 class NotAuthenticatedError(Exception):

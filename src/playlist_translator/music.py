@@ -23,6 +23,7 @@ class Song:
     """
     """
     # TODO - are these all needed? anything else needed?
+    # Ok but I think I do need service ID otherwise how do I put it into a new playlist?????
     name: str
     artist: Artist
     release_date: datetime.date
@@ -64,6 +65,10 @@ class Song:
             track_number=track['trackNumber'],
             composer_name=track['composer'] or None
         )
+
+    @property
+    def artist_track(self):
+        return ' '.join([self.artist.name, self.name])
 
 
 @dataclass
