@@ -23,7 +23,8 @@ class Song:
     """
     """
     # TODO - are these all needed? anything else needed?
-    # Ok but I think I do need service ID otherwise how do I put it into a new playlist?????
+    song_id: str
+    service_name: str
     name: str
     artist: Artist
     release_date: datetime.date
@@ -41,6 +42,8 @@ class Song:
         release_date = parsers.parse_apple_date(track_attrs['releaseDate'])
 
         return cls(
+            song_id=track['id'],
+            service_name='Apple',
             name=track_attrs['name'],
             artist=artist,
             release_date=release_date,
@@ -58,6 +61,8 @@ class Song:
         release_date = datetime.date(year=track['year'], month=1, day=1)
 
         return cls(
+            song_id=entry['id'],
+            service_name='GPlay',
             name=track['title'],
             artist=artist,
             release_date=release_date,

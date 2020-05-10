@@ -11,6 +11,8 @@ def test_playlist_from_apple_response(apple_tracks_list):
     song = playlist.songs[0]
     for track in apple_tracks_list:
         track_attrs = track['attributes']
+        assert song.song_id == track['id']
+        assert song.service_name == 'Apple'
         assert song.name == track_attrs['name']
         assert song.artist.name == track_attrs['artistName']
         assert (song.release_date ==
@@ -26,6 +28,8 @@ def test_playlist_from_gplay_response(gplay_response):
     for position, orig_entry in enumerate(gplay_response):
         song = playlist.songs[position]
         orig_track = orig_entry['track']
+        assert song.song_id == orig_entry['id']
+        assert song.service_name == 'GPlay'
         assert song.name == orig_track['title']
         assert song.artist.name == orig_track['artist']
         assert song.release_date == datetime.date(orig_track['year'], 1, 1)
