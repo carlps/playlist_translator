@@ -159,8 +159,8 @@ class Apple(Service):
 
 
 @dataclass
-class GooglePlay(Service):
-    name: str = "Google Play"
+class GPlay(Service):
+    name: str = "GPlay"
     client: Mobileclient = Mobileclient()
 
     @property
