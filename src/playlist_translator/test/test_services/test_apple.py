@@ -4,10 +4,16 @@ import os
 import jwt
 import pytest
 
+from ... import parsers
+from ...services import Apple, Playlist
+
 
 @pytest.fixture
-def apple():
-    from ...services import Apple
+def apple(apple_response, monkeypatch):
+    def get_playlist_response(self, playlist_id):
+        return apple_response
+
+    monkeypatch.setattr(Apple, "get_playlist_response", get_playlist_response)
     return Apple()
 
 
@@ -97,3 +103,20 @@ def test_token(mock_token, apple):
     assert token.headers == headers
 
     assert token == mock_token
+
+
+def test_playlist_from_apple_response(apple, apple_response):
+    playlist = apple.get_playlist('fake_id')
+    assert playlist
+    tracks = apple_response['data'][0]['relationships']['tracks']['data']
+    for position, track in enumerate(tracks):
+        song = playlist.songs[position]
+        track_attrs = track['attributes']
+        assert song.song_id == track['id']
+        assert song.name == track_attrs['name']
+        assert song.artist.name == track_attrs['artistName']
+        assert (song.release_date ==
+                parsers.parse_apple_date(track_attrs['releaseDate']))
+        assert song.album_name == track_attrs['albumName']
+        assert song.track_number == track_attrs['trackNumber']
+        assert song.composer_name == track_attrs.get('composerName')

@@ -4,7 +4,7 @@ Define music services in here. All should inherit from Service.
 from dataclasses import dataclass
 import datetime
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Type, TypeVar
 from urllib import parse
 
 from glom import glom
@@ -12,9 +12,11 @@ from gmusicapi import Mobileclient
 import jwt
 import requests
 
+from . import parsers
+from .music import Artist, Song
 from .utils import get_environ
-from .music import Playlist, Song
 
+P = TypeVar('P', bound='Playlist')
 
 @dataclass
 class Service:
@@ -26,14 +28,23 @@ class Service:
     def is_authenticated(self):
         raise NotImplementedError
 
-    def get_playlist(self, playlist_id: str) -> Playlist:
+    def get_playlist(self, playlist_id: str) -> 'Playlist':
         raise NotImplementedError
 
-    def lookup_song(self, song: Song) -> Tuple[Optional[Song], Optional[str]]:
+    def lookup_song(self, song: Song) -> Song:
         """
-        Given a Song, return this services definition of that Song
+        Given a Song, look it up and return this service's definition of that
+        Song
         """
         raise NotImplementedError
+
+    def response_track_to_song(self, track_dict: Dict) -> Song:
+        """
+        Takes a track_dict (should be response from API call) and
+        creates a Song object from it.
+        """
+        raise NotImplementedError
+
 
 
 @dataclass
@@ -130,12 +141,15 @@ class Apple(Service):
         response = self.get(url)
         return response.json()
 
-    def get_playlist(self, playlist_id: str) -> Playlist:
+    def get_playlist(self, playlist_id: str) -> 'Playlist':
         response = self.get_playlist_response(playlist_id)
         tracks_list = glom(response, self.tracks_glom)
         # returns list of list. why?
         assert len(tracks_list) == 1
-        return Playlist.from_apple_tracks_list(tracks_list[0])
+        tracks_list = tracks_list[0]
+        songs = [self.response_track_to_song(track) for track in tracks_list]
+        playlist = Playlist(self, songs)
+        return playlist
 
     def _search_song(self, song: Song) -> requests.models.Response:
         # ex: search?term=james+brown&limit=2&types=artists,albums
@@ -146,16 +160,31 @@ class Apple(Service):
         response = self.get(lookup_url, params=params)
         return response
 
-    def lookup_song(self, song: Song) -> Tuple[Optional[Song], Optional[str]]:
+    def lookup_song(self, song: Song) -> Song:
         search_results_response = self._search_song(song)
         # TODO hangle bad response
         search_results = search_results_response.json()
         songs = glom(search_results, self.search_songs_glom)
         # for now just take first result
         first_result = songs[0]
-        result_song = Song.from_apple_track(first_result)
-        # TODO - return error if error
-        return result_song, None
+        song = self.response_track_to_song(first_result)
+        return song
+
+    def response_track_to_song(self, track_dict: Dict) -> Song:
+        track_attrs = track_dict['attributes']
+        artist = Artist(track_attrs['artistName'])
+        release_date = parsers.parse_apple_date(track_attrs['releaseDate'])
+
+        return Song(
+            song_id=track_dict['id'],
+            name=track_attrs['name'],
+            artist=artist,
+            release_date=release_date,
+            album_name=track_attrs['albumName'],
+            track_number=track_attrs['trackNumber'],
+            composer_name=track_attrs.get('composerName')
+        )
+
 
 
 @dataclass
@@ -191,9 +220,10 @@ class GPlay(Service):
         response = self.client.get_shared_playlist_contents(parsed_playlist_id)
         return response
 
-    def get_playlist(self, playlist_id: str) -> Playlist:
+    def get_playlist(self, playlist_id: str) -> 'Playlist':
         response = self.get_playlist_response(playlist_id)
-        playlist = Playlist.from_gplay_response(response)
+        songs = [self.response_track_to_song(track) for track in response]
+        playlist = Playlist(self, songs)
         return playlist
 
     def _search_song(self, song: Song) -> List[Dict]:
@@ -201,12 +231,50 @@ class GPlay(Service):
         search_results = self.client.search(query)
         return search_results['song_hits']
 
-    def lookup_song(self, song: Song) -> Tuple[Optional[Song], Optional[str]]:
+    def lookup_song(self, song: Song) -> Song:
         results = self._search_song(song)
         # TODO handle bad response
         # for now just take first result
-        result_song = Song.from_gplay_entry(results[0])
-        return result_song, None
+        song = self.response_track_to_song(results[0])
+        return song
+
+    def response_track_to_song(self, track_dict: Dict) -> Song:
+        """
+        Reformat a playlist entry from GPlay API to a dict of Song params.
+        Adds extra key "song_id"
+        """
+        track = track_dict['track']
+        artist = Artist(track['artist'])
+        # gplay only has realease year for a song
+        release_date = datetime.date(year=track['year'], month=1, day=1)
+
+        return Song(
+            song_id=track_dict['id'],
+            name=track['title'],
+            artist=artist,
+            release_date=release_date,
+            album_name=track['album'],
+            track_number=track['trackNumber'],
+            composer_name=track['composer'] or None
+        )
+
+
+@dataclass
+class Playlist:
+    service: Service
+    songs: List[Song]
+
+    def to(self, service: Service) -> 'Playlist':
+        # handle if playlist is already to service, just return it back
+        if service  == self.service:
+            return self
+        
+        if not service.is_authenticated:
+            raise NotAuthenticatedError("To service must be authenticated")
+
+        # TODO hand lookup failures
+        new_songs = [service.lookup_song(song) for song in self.songs]
+        return Playlist(service, new_songs)
 
 
 class NotAuthenticatedError(Exception):
