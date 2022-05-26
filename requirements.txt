@@ -64,18 +64,18 @@ protobuf==3.11.3
     # via gmusicapi
 py==1.8.1
     # via pytest
-pyasn1-modules==0.2.8
-    # via oauth2client
 pyasn1==0.4.8
     # via
     #   oauth2client
     #   pyasn1-modules
     #   rsa
+pyasn1-modules==0.2.8
+    # via oauth2client
 pycparser==2.20
     # via cffi
 pycryptodomex==3.9.7
     # via gpsoauth
-pyjwt==1.7.1
+pyjwt==2.4.0
     # via -r requirements.in
 pyparsing==2.4.7
     # via packaging
