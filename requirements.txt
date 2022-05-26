@@ -89,7 +89,7 @@ requests==2.23.0
     #   gmusicapi
     #   gpsoauth
     #   mechanicalsoup
-rsa==4.1
+rsa==4.7
     # via oauth2client
 six==1.14.0
     # via
