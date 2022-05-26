@@ -62,7 +62,7 @@ prompt-toolkit==3.0.5
     # via -r requirements.in
 protobuf==3.11.3
     # via gmusicapi
-py==1.8.1
+py==1.10.0
     # via pytest
 pyasn1==0.4.8
     # via
