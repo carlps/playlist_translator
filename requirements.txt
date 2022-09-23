@@ -60,7 +60,7 @@ proboscis==1.2.6.0
     # via gmusicapi
 prompt-toolkit==3.0.5
     # via -r requirements.in
-protobuf==3.11.3
+protobuf==3.18.3
     # via gmusicapi
 py==1.8.1
     # via pytest
@@ -98,7 +98,6 @@ six==1.14.0
     #   oauth2client
     #   packaging
     #   pip-tools
-    #   protobuf
     #   python-dateutil
 soupsieve==2.0
     # via beautifulsoup4
@@ -113,4 +112,3 @@ wcwidth==0.1.9
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip
-# setuptools
