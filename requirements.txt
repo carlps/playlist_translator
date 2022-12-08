@@ -16,7 +16,7 @@ boltons==20.1.0
     # via
     #   face
     #   glom
-certifi==2020.4.5.1
+certifi==2022.12.7
     # via requests
 cffi==1.14.0
     # via cryptography
