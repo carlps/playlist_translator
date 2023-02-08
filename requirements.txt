@@ -24,7 +24,7 @@ chardet==3.0.4
     # via requests
 click==7.1.2
     # via pip-tools
-cryptography==3.2
+cryptography==39.0.1
     # via -r requirements.in
 decorator==4.4.2
     # via gmusicapi
@@ -93,7 +93,6 @@ rsa==4.1
     # via oauth2client
 six==1.14.0
     # via
-    #   cryptography
     #   mechanicalsoup
     #   oauth2client
     #   packaging
